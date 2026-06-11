@@ -1,0 +1,481 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>Minority Drinks - Live Vote</title>
+<script src="https://cdn.jsdelivr.net/npm/mqtt/dist/mqtt.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs/qrcode.min.js"></script>
+<style>
+  :root{
+    --bg:#0f1020; --bg2:#1a1b3a; --card:#222448; --line:#34376b;
+    --txt:#f4f5ff; --mut:#a6a8d8; --acc:#ffcf4d; --acc2:#ff6b6b; --ok:#3ddc97;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:radial-gradient(1200px 800px at 50% -10%,var(--bg2),var(--bg));color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;min-height:100%}
+  body{min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:18px 16px 40px}
+  .wrap{width:100%;max-width:720px}
+  h1{font-size:26px;margin:6px 0 2px;text-align:center}
+  .sub{color:var(--mut);text-align:center;margin:0 0 18px;font-size:14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px;margin:12px 0;box-shadow:0 12px 40px rgba(0,0,0,.35)}
+  .btn{display:block;width:100%;border:none;border-radius:14px;padding:16px;font-size:18px;font-weight:700;cursor:pointer;margin:10px 0;transition:transform .06s ease,filter .15s}
+  .btn:active{transform:scale(.98)}
+  .btn-acc{background:var(--acc);color:#1a1320}
+  .btn-2{background:var(--bg2);color:var(--txt);border:1px solid var(--line)}
+  .btn-ghost{background:transparent;color:var(--mut);border:1px solid var(--line);font-weight:600;font-size:15px;padding:12px}
+  input,textarea{width:100%;padding:15px;border-radius:12px;border:1px solid var(--line);background:#15173a;color:var(--txt);font-size:18px}
+  input{text-align:center;letter-spacing:1px}
+  textarea{font-size:15px;line-height:1.5;min-height:200px;font-family:ui-monospace,Menlo,Consolas,monospace;letter-spacing:0}
+  .seg{display:flex;gap:8px;justify-content:center;margin:6px 0}
+  .seg button{flex:1;max-width:90px;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--bg2);color:var(--txt);font-weight:800;font-size:18px;cursor:pointer}
+  .seg button.on{background:var(--acc);color:#1a1320;border-color:var(--acc)}
+  .pill{display:inline-block;background:var(--bg2);border:1px solid var(--line);border-radius:999px;padding:6px 14px;color:var(--mut);font-size:13px;margin:3px}
+  .roomcode{font-size:44px;font-weight:800;letter-spacing:8px;color:var(--acc);text-align:center;margin:6px 0}
+  .center{text-align:center}
+  .q{font-size:clamp(22px,5vw,40px);font-weight:800;line-height:1.2;text-align:center;margin:8px 0 18px}
+  .opt{position:relative;overflow:hidden}
+  .opt .lbl{position:relative;z-index:2;display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .opt .cnt{font-size:15px;background:rgba(0,0,0,.25);border-radius:999px;padding:3px 10px;min-width:34px;text-align:center}
+  .letter{font-size:clamp(34px,9vw,56px);font-weight:900;text-align:center;padding:26px 16px}
+  .bar{position:absolute;left:0;top:0;bottom:0;width:0;background:rgba(255,255,255,.10);z-index:1;transition:width .5s ease}
+  .opt.lose{outline:3px solid var(--acc2);background:#3a2440}
+  .opt.safe{opacity:.7}
+  .opt.mine{box-shadow:0 0 0 3px var(--acc) inset}
+  .big{font-size:clamp(30px,8vw,64px);font-weight:900;text-align:center;margin:10px 0}
+  .drink{color:var(--acc2)} .safe-t{color:var(--ok)}
+  .muted{color:var(--mut);font-size:14px;text-align:center}
+  .hidden{display:none}
+  #qr{display:flex;justify-content:center;margin:14px 0}
+  #qr img,#qr canvas{border-radius:12px;background:#fff;padding:10px}
+  .players{display:flex;flex-wrap:wrap;justify-content:center}
+  .hostbar{display:flex;gap:10px;margin-top:12px}
+  .hostbar .btn{margin:0}
+  .status{font-size:14px;color:var(--mut);text-align:center;margin-top:8px;min-height:18px}
+  .link{color:var(--acc);word-break:break-all;font-size:13px}
+  .footer{color:var(--mut);font-size:12px;text-align:center;margin-top:20px;line-height:1.5}
+  pre.fmt{background:#15173a;border:1px solid var(--line);border-radius:10px;padding:12px;font-size:13px;color:var(--mut);overflow:auto;white-space:pre-wrap}
+  label.file{display:block;border:1px dashed var(--line);border-radius:12px;padding:14px;text-align:center;color:var(--mut);cursor:pointer;margin:10px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div id="home">
+    <h1>Minority Drinks</h1>
+    <p class="sub">Everyone votes on their phone. Fewest votes = you drink.</p>
+    <div class="card">
+      <button class="btn btn-acc" onclick="show('hostpick')">Host a game (big screen)</button>
+      <button class="btn btn-2" onclick="showJoin()">Join a game</button>
+    </div>
+    <p class="footer">Open "Host" on a laptop/TV. Everyone else taps "Join" on their phone and scans the QR code.</p>
+  </div>
+
+  <div id="hostpick" class="hidden">
+    <h1>Pick a mode</h1>
+    <p class="sub">How do you want to run the questions?</p>
+    <div class="card">
+      <button class="btn btn-acc" onclick="startHost('builtin')">Built-in questions<br><span style="font-weight:500;font-size:13px;opacity:.8">30 ready-made, work-friendly &amp; funny</span></button>
+      <button class="btn btn-2" onclick="show('upload')">Upload my own questions<br><span style="font-weight:500;font-size:13px;opacity:.8">Paste or load a file</span></button>
+      <button class="btn btn-2" onclick="show('verbalpick')">Verbal mode (A-D)<br><span style="font-weight:500;font-size:13px;opacity:.8">Say it out loud, players pick a letter - unlimited / impromptu</span></button>
+      <button class="btn btn-ghost" onclick="show('home')">Back</button>
+    </div>
+  </div>
+
+  <div id="verbalpick" class="hidden">
+    <h1>Verbal mode</h1>
+    <p class="sub">You read the question + options aloud. Players just tap a letter. You can change the number of options any time during the game.</p>
+    <div class="card center">
+      <p class="muted" style="margin-top:0">How many options to start with?</p>
+      <div class="seg">
+        <button onclick="setVerbalStart(2)" id="vs2">2</button>
+        <button onclick="setVerbalStart(3)" id="vs3">3</button>
+        <button onclick="setVerbalStart(4)" id="vs4" class="on">4</button>
+      </div>
+      <button class="btn btn-acc" style="margin-top:14px" onclick="startHost('verbal')">Open the room</button>
+      <button class="btn btn-ghost" onclick="show('hostpick')">Back</button>
+    </div>
+  </div>
+
+  <div id="upload" class="hidden">
+    <h1>Upload your questions</h1>
+    <p class="sub">One question per line. Separate the question and each option with a vertical bar | (2-4 options each).</p>
+    <div class="card">
+      <pre class="fmt">Best supper spot? | Prata | Mala | McDonald's | Zi char
+Who texts in the group chat most? | Boss | Me | The intern
+Office aircon is... | Too cold | Perfect | Too warm</pre>
+      <label class="file">Choose a .txt / .csv file
+        <input id="fileIn" type="file" accept=".txt,.csv,text/plain" style="display:none" onchange="loadFile(event)" />
+      </label>
+      <textarea id="qText" placeholder="Paste your questions here, one per line..."></textarea>
+      <button class="btn btn-2" style="margin-top:10px" onclick="previewParse()">Check questions</button>
+      <div class="status" id="parseStatus"></div>
+      <button class="btn btn-acc hidden" id="useBtn" onclick="useUploaded()">Open the room with these</button>
+      <button class="btn btn-ghost" onclick="show('hostpick')">Back</button>
+    </div>
+  </div>
+
+  <div id="join" class="hidden">
+    <h1>Join the game</h1>
+    <div class="card">
+      <p class="muted" style="margin-top:0">Room code</p>
+      <input id="joinCode" maxlength="4" placeholder="ABCD" autocapitalize="characters" />
+      <p class="muted">Your name</p>
+      <input id="joinName" maxlength="16" placeholder="e.g. Wei Ming" style="letter-spacing:0" />
+      <button class="btn btn-acc" style="margin-top:14px" onclick="doJoin()">Let's go</button>
+      <div class="status" id="joinStatus"></div>
+    </div>
+  </div>
+
+  <div id="player" class="hidden">
+    <div class="center"><span class="pill" id="pName"></span><span class="pill" id="pRoom"></span></div>
+    <div id="pBody"></div>
+    <div class="status" id="pStatus"></div>
+  </div>
+
+  <div id="host" class="hidden">
+    <div id="hostLobby">
+      <h1>Room is open!</h1>
+      <p class="sub">Tell everyone to open this game, tap <b>Join</b>, and scan:</p>
+      <div class="card center">
+        <div class="roomcode" id="hRoom">----</div>
+        <div id="qr"></div>
+        <p class="muted">or open the same link and enter code <b id="hRoom2">----</b></p>
+        <p class="link" id="hLink"></p>
+      </div>
+      <div class="card">
+        <p class="center" style="margin:0 0 8px"><span class="pill" id="hMode"></span> &nbsp; <b id="hCount">0</b> players</p>
+        <div class="players" id="hPlayers"></div>
+        <button class="btn btn-acc" id="hStartBtn" onclick="hostNext()" style="margin-top:14px">Start the game</button>
+      </div>
+    </div>
+
+    <div id="hostGame" class="hidden">
+      <div class="center"><span class="pill" id="hgRoom"></span><span class="pill" id="hgProgress"></span><span class="pill" id="hgVoted"></span></div>
+      <div id="hgVerbalCtrl" class="card center hidden">
+        <p class="muted" style="margin:0 0 6px">Options this round</p>
+        <div class="seg">
+          <button onclick="setVerbalCount(2)" id="vc2">2</button>
+          <button onclick="setVerbalCount(3)" id="vc3">3</button>
+          <button onclick="setVerbalCount(4)" id="vc4">4</button>
+        </div>
+      </div>
+      <div class="q" id="hgQ"></div>
+      <div id="hgOpts"></div>
+      <div class="hostbar">
+        <button class="btn btn-2" id="hgReveal" onclick="hostReveal()">Reveal who drinks</button>
+        <button class="btn btn-acc hidden" id="hgNext" onclick="hostNext()">Next</button>
+      </div>
+      <div class="status" id="hgStatus"></div>
+      <button class="btn btn-ghost" id="hgShuffle" onclick="hostShuffle()">Shuffle questions</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const BROKER = "wss://broker.emqx.io:8084/mqtt";
+const NS = "awparty2026";
+const LETTERS = ["A","B","C","D"];
+
+const QUESTIONS = [
+  ["Your ideal weekend?", ["Sleep all day","Party all night","Outdoor adventure","Netflix marathon"]],
+  ["Best cuisine, no debate:", ["Chinese","Japanese","Korean","Western"]],
+  ["Drink of choice (the non-alcoholic one):", ["Coffee","Tea","Bubble tea","Energy drink"]],
+  ["Pineapple on pizza?", ["Yes, love it","No, never","Honestly don't care"]],
+  ["You win $10,000 tomorrow. You:", ["Save every cent","Travel the world","Shopping spree","Treat the whole office"]],
+  ["Your phone battery RIGHT NOW:", ["Above 80%","50-80%","20-50%","Below 20% (living dangerously)"]],
+  ["How fast do you reply to texts?", ["Instantly","Within an hour","'Seen' then forget","Eventually... maybe"]],
+  ["Toilet paper goes:", ["Over","Under","I genuinely don't notice"]],
+  ["You are a:", ["Morning person","Night owl","I suffer either way"]],
+  ["Your karaoke move:", ["Belt a ballad","Rap super fast","Hide and clap","Hog the mic all night"]],
+  ["Your desk right now:", ["Spotless","Organised chaos","Certified disaster zone"]],
+  ["Dream pet:", ["Dog","Cat","Something exotic","No pets, thanks"]],
+  ["At a buffet you:", ["Sprint to dessert","Pace strategically","Eat till you can't move","A little of everything"]],
+  ["Your morning alarm:", ["One and done","3+ snoozes","Five alarms minimum"]],
+  ["In a group project you:", ["Do everything","Contribute fairly","Mysteriously vanish"]],
+  ["Spice tolerance:", ["No spice please","Mild","Bring the heat","I cry but continue"]],
+  ["Travel style:", ["Plan every minute","Loose plan","Total wing-it"]],
+  ["Favourite season:", ["Spring","Summer","Autumn","Winter"]],
+  ["Perfect Friday night:", ["Out clubbing","Dinner with friends","Gaming at home","Already asleep"]],
+  ["Pick a superpower:", ["Fly","Invisibility","Teleport","Read minds"]],
+  ["Your shower singing is:", ["Concert-level","Pretty decent","Terrible but joyful","I don't sing"]],
+  ["Last app you opened before this:", ["Instagram","TikTok","WhatsApp/Telegram","Work email (respect)"]],
+  ["Your guilty vice:", ["Sweet tooth","Online shopping","Doom-scrolling","Caffeine"]],
+  ["If the office had a nap room you'd:", ["Use it daily","Sometimes","Never (suspicious)"]],
+  ["Your cooking skills:", ["MasterChef","I survive","Delivery is my personal chef"]],
+  ["Zombie apocalypse, your role:", ["The leader","The fighter","The strategist","First one gone"]],
+  ["You're late because:", ["Overslept","Traffic","'Lost track of time'","I'm never late"]],
+  ["Hot weather, you:", ["Crank the aircon","Suffer silently","Complain loudly","Love it, actually"]],
+  ["The office group chat - you:", ["Mute it","Read, never reply","Reply to everything","What group chat?"]],
+  ["Pick a midnight snack:", ["Instant noodles","Leftovers","Sweet stuff","I have discipline"]]
+];
+
+let client=null, role=null, room=null, myId=null, myName=null;
+let hostMode="builtin", activeQuestions=QUESTIONS, verbalCount=4, verbalStart=4, pendingCustom=null;
+let qOrder=[], qPos=-1, phase="lobby";
+let players={}, votes={};
+let state=null, myChoice=null;
+
+const $ = id => document.getElementById(id);
+function show(id){ ["home","hostpick","verbalpick","upload","join","player","host"].forEach(s=>$(s).classList.add("hidden")); $(id).classList.remove("hidden"); }
+function genRoom(){ const c="ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; let r=""; for(let i=0;i<4;i++) r+=c[Math.floor(Math.random()*c.length)]; return r; }
+function getMyId(){ let v=localStorage.getItem("awparty_id"); if(!v){ v="p_"+Math.random().toString(16).slice(2,10); localStorage.setItem("awparty_id",v);} return v; }
+function shuffled(n){ const a=[...Array(n).keys()]; for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); const tmp=a[i]; a[i]=a[j]; a[j]=tmp;} return a; }
+function tState(){ return NS+"/"+room+"/state"; }
+function tJoin(){ return NS+"/"+room+"/join"; }
+function tVote(){ return NS+"/"+room+"/vote"; }
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];}); }
+
+function connect(onReady){
+  const cid = NS+"_"+Math.random().toString(16).slice(2);
+  client = mqtt.connect(BROKER, {clientId:cid, clean:true, connectTimeout:8000, reconnectPeriod:2000, keepalive:30});
+  client.on("connect", function(){ if(onReady) onReady(); });
+  client.on("reconnect", function(){ setStatusAll("Reconnecting..."); });
+  client.on("error", function(e){ setStatusAll("Connection issue: "+(e&&e.message||e)); });
+  client.on("message", onMessage);
+}
+function setStatusAll(t){ ["joinStatus","pStatus","hgStatus"].forEach(function(id){ if($(id)) $(id).textContent=t; }); }
+
+function tally(voteMap, optionCount){
+  const counts = new Array(optionCount).fill(0);
+  Object.values(voteMap||{}).forEach(function(c){ if(Number.isInteger(c)&&c>=0&&c<optionCount) counts[c]++; });
+  let min=Infinity;
+  counts.forEach(function(c){ if(c>0 && c<min) min=c; });
+  const optsWithVotes = counts.filter(function(c){return c>0;}).length;
+  let loseOpts=[];
+  if(optsWithVotes>=2){ counts.forEach(function(c,i){ if(c>0 && c===min) loseOpts.push(i); }); }
+  return {counts:counts, loseOpts:loseOpts, optsWithVotes:optsWithVotes};
+}
+
+function parseQuestions(text){
+  const out=[], skipped=[];
+  (text||"").split(/\r?\n/).forEach(function(line){
+    const t=line.trim(); if(!t) return;
+    const parts=t.split("|").map(function(s){return s.trim();}).filter(function(s){return s.length;});
+    if(parts.length>=3) out.push([parts[0], parts.slice(1,5)]);
+    else skipped.push(t);
+  });
+  return {out:out, skipped:skipped};
+}
+function loadFile(ev){
+  const f=ev.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=function(){ $("qText").value=r.result; previewParse(); };
+  r.readAsText(f);
+}
+function previewParse(){
+  const res=parseQuestions($("qText").value);
+  if(res.out.length){
+    $("parseStatus").textContent= res.out.length+" question"+(res.out.length>1?"s":"")+" ready"+(res.skipped.length?(" - "+res.skipped.length+" line(s) skipped (need question + at least 2 options)"):"");
+    $("useBtn").classList.remove("hidden");
+    pendingCustom=res.out;
+  } else {
+    $("parseStatus").textContent="No valid questions found. Each line needs: Question | Option | Option";
+    $("useBtn").classList.add("hidden"); pendingCustom=null;
+  }
+}
+function useUploaded(){ if(pendingCustom && pendingCustom.length) startHost("custom", pendingCustom); }
+function setVerbalStart(n){ verbalStart=n; ["vs2","vs3","vs4"].forEach(function(id){$(id).classList.remove("on");}); $("vs"+n).classList.add("on"); }
+
+function startHost(mode, customQs){
+  hostMode=mode;
+  if(mode==="custom"){ activeQuestions=customQs; }
+  else if(mode==="builtin"){ activeQuestions=QUESTIONS; }
+  else { activeQuestions=[]; verbalCount=verbalStart; }
+  role="host"; room=genRoom(); myId=getMyId();
+  qOrder = (mode==="verbal") ? [] : shuffled(activeQuestions.length);
+  qPos=-1; phase="lobby"; players={}; votes={};
+  show("host");
+  $("hRoom").textContent=room; $("hRoom2").textContent=room; $("hgRoom").textContent="Room "+room;
+  $("hMode").textContent = mode==="verbal" ? "Verbal mode" : (mode==="custom" ? (activeQuestions.length+" custom questions") : "Built-in");
+  $("hgShuffle").classList.toggle("hidden", mode==="verbal");
+  $("hgVerbalCtrl").classList.toggle("hidden", mode!=="verbal");
+  const url = location.origin+location.pathname+"?r="+room;
+  $("hLink").textContent=url;
+  $("qr").innerHTML="";
+  try{ new QRCode($("qr"), {text:url, width:200, height:200, correctLevel:QRCode.CorrectLevel.M}); }
+  catch(e){ $("qr").innerHTML='<p class="muted">'+url+'</p>'; }
+  $("hostLobby").classList.remove("hidden"); $("hostGame").classList.add("hidden");
+  connect(function(){
+    client.subscribe(tJoin()); client.subscribe(tVote());
+    publishState();
+  });
+}
+
+function currentQA(){
+  if(hostMode==="verbal") return ["", LETTERS.slice(0,verbalCount)];
+  return activeQuestions[qOrder[qPos]];
+}
+
+function publishState(){
+  if(role!=="host") return;
+  const verbal = hostMode==="verbal";
+  const payload = {phase:phase, qPos:qPos, verbal:verbal, total:Object.keys(players).length, names:Object.values(players)};
+  if(phase==="voting" || phase==="results"){
+    const qa=currentQA(); payload.q=qa[0]; payload.opts=qa[1];
+    if(phase==="results"){
+      const t=tally(votes[qPos]||{}, qa[1].length);
+      payload.counts=t.counts; payload.loseOpts=t.loseOpts;
+    }
+  }
+  client.publish(tState(), JSON.stringify(payload), {retain:true});
+}
+
+function onMessage(topic, msg){
+  let data; try{ data=JSON.parse(msg.toString()); }catch(e){ return; }
+  if(role==="host"){
+    if(topic===tJoin()){
+      if(data.id && data.name){ players[data.id]=data.name; renderHostLobby(); if(phase!=="lobby") publishState(); }
+    } else if(topic===tVote()){
+      if(data.id!=null && Number.isInteger(data.qPos) && Number.isInteger(data.choice)){
+        votes[data.qPos]=votes[data.qPos]||{}; votes[data.qPos][data.id]=data.choice;
+        if(data.qPos===qPos && phase==="voting"){ renderHostGame(); publishState(); }
+      }
+    }
+  } else if(role==="player"){
+    if(topic===tState()){ state=data; renderPlayer(); }
+  }
+}
+
+function renderHostLobby(){
+  $("hCount").textContent=Object.keys(players).length;
+  const c=$("hPlayers"); c.innerHTML="";
+  Object.values(players).forEach(function(n){ const s=document.createElement("span"); s.className="pill"; s.textContent=n; c.appendChild(s); });
+}
+
+function hostNext(){
+  if(hostMode==="verbal"){ qPos++; }
+  else { qPos++; if(qPos>=qOrder.length){ qOrder=shuffled(activeQuestions.length); qPos=0; } }
+  phase="voting";
+  $("hostLobby").classList.add("hidden"); $("hostGame").classList.remove("hidden");
+  $("hgNext").classList.add("hidden"); $("hgReveal").classList.remove("hidden");
+  renderHostGame(); publishState();
+}
+function hostReveal(){
+  phase="results";
+  $("hgNext").classList.remove("hidden"); $("hgReveal").classList.add("hidden");
+  renderHostGame(); publishState();
+}
+function hostShuffle(){
+  if(hostMode==="verbal") return;
+  qOrder=shuffled(activeQuestions.length); qPos=-1; phase="lobby";
+  $("hostGame").classList.add("hidden"); $("hostLobby").classList.remove("hidden");
+  publishState();
+}
+function setVerbalCount(n){
+  verbalCount=n;
+  ["vc2","vc3","vc4"].forEach(function(id){$(id).classList.remove("on");}); $("vc"+n).classList.add("on");
+  if(phase==="voting" || phase==="results"){ renderHostGame(); publishState(); }
+}
+
+function renderHostGame(){
+  const verbal = hostMode==="verbal";
+  if(verbal){ ["vc2","vc3","vc4"].forEach(function(id){$(id).classList.remove("on");}); $("vc"+verbalCount).classList.add("on"); }
+  const qa=currentQA(); const opts=qa[1];
+  $("hgProgress").textContent= verbal ? ("Round "+(qPos+1)) : ("Q"+(qPos+1));
+  $("hgQ").textContent= verbal ? "Ask your question out loud" : qa[0];
+  const vm=votes[qPos]||{};
+  const voted=Object.keys(vm).length, total=Object.keys(players).length;
+  $("hgVoted").textContent= voted+" / "+total+" voted";
+  const t=tally(vm, opts.length);
+  const maxc=Math.max.apply(null,[1].concat(t.counts));
+  const wrap=$("hgOpts"); wrap.innerHTML="";
+  opts.forEach(function(label,i){
+    const d=document.createElement("div"); d.className="btn btn-2 opt"+(verbal?" letter":"");
+    if(phase==="results"){ d.classList.add(t.loseOpts.indexOf(i)>=0?"lose":"safe"); }
+    const showCount = (phase==="results");
+    const pct = showCount ? Math.round(t.counts[i]/maxc*100) : 0;
+    const lbl = verbal ? LETTERS[i] : label;
+    let namesHtml="";
+    if(phase==="results" && t.loseOpts.indexOf(i)>=0){
+      const names=Object.keys(vm).filter(function(id){return vm[id]===i;}).map(function(id){return players[id];}).filter(Boolean);
+      if(names.length) namesHtml='<div class="muted" style="text-align:left;margin-top:6px">Drink: '+names.map(escapeHtml).join(", ")+'</div>';
+    }
+    d.innerHTML='<div class="bar" style="width:'+pct+'%"></div>'+
+      '<div class="lbl"><span>'+escapeHtml(lbl)+'</span>'+(showCount?'<span class="cnt">'+t.counts[i]+'</span>':'')+'</div>'+namesHtml;
+    wrap.appendChild(d);
+  });
+  if(phase==="results"){
+    if(t.optsWithVotes<2) $("hgStatus").textContent = voted? "Total agreement - nobody drinks this round!" : "No votes came in.";
+    else if(t.loseOpts.length>1) $("hgStatus").textContent = "Tie for fewest - everyone in those options drinks!";
+    else $("hgStatus").textContent = "Fewest votes -> that group drinks!";
+  } else {
+    $("hgStatus").textContent = verbal ? "Read the options aloud (A, B, C...). Votes are hidden until you reveal." : "Votes are hidden until you reveal.";
+  }
+}
+
+function showJoin(){
+  show("join");
+  const p=new URLSearchParams(location.search);
+  if(p.get("r")) $("joinCode").value=p.get("r").toUpperCase();
+  const saved=localStorage.getItem("awparty_name"); if(saved) $("joinName").value=saved;
+}
+function doJoin(){
+  const code=$("joinCode").value.trim().toUpperCase();
+  const name=$("joinName").value.trim();
+  if(code.length!==4){ $("joinStatus").textContent="Enter the 4-letter room code."; return; }
+  if(!name){ $("joinStatus").textContent="Enter your name."; return; }
+  role="player"; room=code; myName=name; myId=getMyId();
+  localStorage.setItem("awparty_name",name);
+  $("pName").textContent=name; $("pRoom").textContent="Room "+room;
+  show("player"); $("pBody").innerHTML='<div class="card center"><p class="muted">Connecting...</p></div>';
+  connect(function(){
+    client.subscribe(tState());
+    client.publish(tJoin(), JSON.stringify({id:myId, name:myName}));
+    setTimeout(function(){ if(client) client.publish(tJoin(), JSON.stringify({id:myId, name:myName})); }, 1500);
+  });
+}
+
+function renderPlayer(){
+  const b=$("pBody");
+  if(!state){ b.innerHTML='<div class="card center"><p class="muted">Waiting for the host...</p></div>'; return; }
+  if(state.phase==="lobby"){
+    b.innerHTML='<div class="card center"><h1 style="margin-top:0">You\'re in!</h1><p class="muted">'+state.total+' players ready. Waiting for the host to start...</p></div>';
+    myChoice=null; return;
+  }
+  const opts=state.opts||[];
+  if(state.phase==="voting"){
+    let h="";
+    if(state.verbal){
+      h+='<div class="q" style="font-size:22px">Listen to the host, then pick:</div>';
+      opts.forEach(function(label,i){
+        h+='<button class="btn btn-2 opt letter'+(myChoice===i?' mine':'')+'" onclick="vote('+i+')">'+escapeHtml(label)+(myChoice===i?' (chosen)':'')+'</button>';
+      });
+    } else {
+      h+='<div class="q">'+escapeHtml(state.q||"")+'</div>';
+      opts.forEach(function(label,i){
+        h+='<button class="btn btn-2 opt'+(myChoice===i?' mine':'')+'" onclick="vote('+i+')"><div class="lbl"><span>'+escapeHtml(label)+'</span>'+(myChoice===i?'<span class="cnt">v</span>':'')+'</div></button>';
+      });
+    }
+    h+= myChoice==null ? '<p class="muted">Tap your choice. You can change it until the host reveals.</p>'
+                       : '<p class="muted">Locked in - you can still change it.</p>';
+    b.innerHTML=h;
+  } else if(state.phase==="results"){
+    const counts=state.counts||[], loseOpts=state.loseOpts||[];
+    const iDrink = myChoice!=null && loseOpts.indexOf(myChoice)>=0;
+    let head;
+    if(loseOpts.length===0) head='<div class="big safe-t">Nobody drinks!</div><p class="muted">Total agreement this round.</p>';
+    else if(myChoice==null) head='<div class="big">You didn\'t vote!</div>';
+    else if(iDrink) head='<div class="big drink">DRINK!</div><p class="muted">You picked the least popular - bottoms up.</p>';
+    else head='<div class="big safe-t">You\'re safe</div>';
+    let h='<div class="card center">'+head+'</div>';
+    if(!state.verbal && state.q) h+='<div class="q" style="font-size:20px">'+escapeHtml(state.q)+'</div>';
+    const maxc=Math.max.apply(null,[1].concat(counts));
+    opts.forEach(function(label,i){
+      const lose=loseOpts.indexOf(i)>=0;
+      h+='<div class="btn btn-2 opt'+(lose?' lose':' safe')+(myChoice===i?' mine':'')+(state.verbal?' letter':'')+'"><div class="bar" style="width:'+Math.round((counts[i]||0)/maxc*100)+'%"></div><div class="lbl"><span>'+escapeHtml(label)+(lose?' (drink)':'')+'</span><span class="cnt">'+(counts[i]||0)+'</span></div></div>';
+    });
+    b.innerHTML=h;
+  }
+}
+function vote(i){
+  if(!state || state.phase!=="voting") return;
+  myChoice=i;
+  client.publish(tVote(), JSON.stringify({id:myId, name:myName, qPos:state.qPos, choice:i}));
+  renderPlayer();
+}
+
+window.addEventListener("load", function(){ const p=new URLSearchParams(location.search); if(p.get("r")) showJoin(); });
+</script>
+</body>
+</html>
