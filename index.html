@@ -72,10 +72,11 @@
 
   <div id="hostpick" class="hidden">
     <h1>Pick a mode</h1>
-    <p class="sub">How do you want to run the questions?</p>
+    <p class="sub">How do you want to run the round?</p>
     <div class="card">
-      <button class="btn btn-acc" onclick="startHost('builtin')">Built-in questions<br><span style="font-weight:500;font-size:13px;opacity:.8">30 ready-made, work-friendly &amp; funny</span></button>
-      <button class="btn btn-2" onclick="show('upload')">Upload my own questions<br><span style="font-weight:500;font-size:13px;opacity:.8">Paste or load a file</span></button>
+      <button class="btn btn-acc" onclick="startHost('builtin')">Minority Drinks - built-in<br><span style="font-weight:500;font-size:13px;opacity:.8">30 ready-made questions, fewest votes drinks</span></button>
+      <button class="btn btn-acc" onclick="startHost('mostlikely')">Most Likely To<br><span style="font-weight:500;font-size:13px;opacity:.8">Vote for a person - most votes drinks</span></button>
+      <button class="btn btn-2" onclick="show('upload')">Upload my own questions<br><span style="font-weight:500;font-size:13px;opacity:.8">Paste or load a file (fewest votes drinks)</span></button>
       <button class="btn btn-2" onclick="show('verbalpick')">Verbal mode (A-D)<br><span style="font-weight:500;font-size:13px;opacity:.8">Say it out loud, players pick a letter - unlimited / impromptu</span></button>
       <button class="btn btn-ghost" onclick="show('home')">Back</button>
     </div>
@@ -210,8 +211,57 @@ const QUESTIONS = [
   ["Pick a midnight snack:", ["Instant noodles","Leftovers","Sweet stuff","I have discipline"]]
 ];
 
+// Most Likely To - prompts only; the options are the players in the room
+const MLT_QUESTIONS = [
+  "Who is most likely to reply to a work email at 2am?",
+  "Who is most likely to be late to the Monday morning meeting?",
+  "Who is most likely to become the boss one day?",
+  "Who is most likely to quit and start their own company?",
+  "Who is most likely to fall asleep in a meeting?",
+  "Who is most likely to survive longest in a zombie apocalypse?",
+  "Who is most likely to win the lottery and tell no one?",
+  "Who is most likely to forget their own birthday?",
+  "Who is most likely to cry during a movie?",
+  "Who is most likely to get lost even with Google Maps?",
+  "Who is most likely to eat instant noodles for a week straight?",
+  "Who is most likely to go viral on TikTok or Xiaohongshu?",
+  "Who is most likely to become a millionaire first?",
+  "Who is most likely to adopt five cats?",
+  "Who is most likely to still be partying at 3am?",
+  "Who is most likely to accidentally reply-all to the whole company?",
+  "Who is most likely to spend their whole salary on bubble tea?",
+  "Who is most likely to show up to a party way overdressed?",
+  "Who is most likely to fight someone for the last piece of food?",
+  "Who is most likely to forget where they parked?",
+  "Who is most likely to sing the loudest at KTV?",
+  "Who is most likely to take the most selfies tonight?",
+  "Who is most likely to lose their phone tonight?",
+  "Who is most likely to text their ex after a few drinks?",
+  "Who is most likely to move to another country on a whim?",
+  "Who is most likely to win an eating competition?",
+  "Who is most likely to get a tattoo on impulse?",
+  "Who is most likely to fall for an online scam?",
+  "Who is most likely to binge a whole drama in one night?",
+  "Who is most likely to survive on three hours of sleep?",
+  "Who is most likely to become a super strict parent?",
+  "Who is most likely to spoil their kids rotten?",
+  "Who is most likely to cancel plans at the last minute?",
+  "Who is most likely to overthink a one-word text?",
+  "Who is most likely to actually read the terms and conditions?",
+  "Who is most likely to be the first to leave the party?",
+  "Who is most likely to be the last one standing tonight?",
+  "Who is most likely to spend an hour deciding what to eat?",
+  "Who is most likely to win 'employee of the month'?",
+  "Who is most likely to start a riot if the office runs out of coffee?",
+  "Who is most likely to have a secret talent no one knows about?",
+  "Who is most likely to get emotional during this game?",
+  "Who is most likely to marry someone they met online?",
+  "Who is most likely to become internet famous by accident?",
+  "Who is most likely to ghost a date?"
+];
+
 let client=null, role=null, room=null, myId=null, myName=null;
-let hostMode="builtin", activeQuestions=QUESTIONS, verbalCount=4, verbalStart=4, pendingCustom=null;
+let hostMode="builtin", activeQuestions=QUESTIONS, verbalCount=4, verbalStart=4, pendingCustom=null, mltOptions=[];
 let qOrder=[], qPos=-1, phase="lobby";
 let players={}, votes={};
 let state=null, myChoice=null;
@@ -236,15 +286,19 @@ function connect(onReady){
 }
 function setStatusAll(t){ ["joinStatus","pStatus","hgStatus"].forEach(function(id){ if($(id)) $(id).textContent=t; }); }
 
-function tally(voteMap, optionCount){
+function countVotes(voteMap, optionCount){
   const counts = new Array(optionCount).fill(0);
   Object.values(voteMap||{}).forEach(function(c){ if(Number.isInteger(c)&&c>=0&&c<optionCount) counts[c]++; });
-  let min=Infinity;
-  counts.forEach(function(c){ if(c>0 && c<min) min=c; });
-  const optsWithVotes = counts.filter(function(c){return c>0;}).length;
-  let loseOpts=[];
-  if(optsWithVotes>=2){ counts.forEach(function(c,i){ if(c>0 && c===min) loseOpts.push(i); }); }
-  return {counts:counts, loseOpts:loseOpts, optsWithVotes:optsWithVotes};
+  return counts;
+}
+// direction "fewest" (minority drinks) or "most" (most-voted drinks)
+function pickTargets(counts, direction){
+  let optsWithVotes=0, best=(direction==="most"?-1:Infinity);
+  counts.forEach(function(c){ if(c>0){ optsWithVotes++; if(direction==="most"){ if(c>best) best=c; } else { if(c<best) best=c; } } });
+  let picks=[];
+  if(direction==="most"){ if(optsWithVotes>=1) counts.forEach(function(c,i){ if(c>0&&c===best) picks.push(i); }); }
+  else { if(optsWithVotes>=2) counts.forEach(function(c,i){ if(c>0&&c===best) picks.push(i); }); }
+  return {picks:picks, optsWithVotes:optsWithVotes};
 }
 
 function parseQuestions(text){
@@ -281,13 +335,14 @@ function startHost(mode, customQs){
   hostMode=mode;
   if(mode==="custom"){ activeQuestions=customQs; }
   else if(mode==="builtin"){ activeQuestions=QUESTIONS; }
+  else if(mode==="mostlikely"){ activeQuestions=MLT_QUESTIONS; }
   else { activeQuestions=[]; verbalCount=verbalStart; }
   role="host"; room=genRoom(); myId=getMyId();
   qOrder = (mode==="verbal") ? [] : shuffled(activeQuestions.length);
-  qPos=-1; phase="lobby"; players={}; votes={};
+  qPos=-1; phase="lobby"; players={}; votes={}; mltOptions=[];
   show("host");
   $("hRoom").textContent=room; $("hRoom2").textContent=room; $("hgRoom").textContent="Room "+room;
-  $("hMode").textContent = mode==="verbal" ? "Verbal mode" : (mode==="custom" ? (activeQuestions.length+" custom questions") : "Built-in");
+  $("hMode").textContent = mode==="verbal" ? "Verbal mode" : (mode==="custom" ? (activeQuestions.length+" custom questions") : (mode==="mostlikely" ? "Most Likely To" : "Minority - Built-in"));
   $("hgShuffle").classList.toggle("hidden", mode==="verbal");
   $("hgVerbalCtrl").classList.toggle("hidden", mode!=="verbal");
   const url = location.origin+location.pathname+"?r="+room;
@@ -304,18 +359,21 @@ function startHost(mode, customQs){
 
 function currentQA(){
   if(hostMode==="verbal") return ["", LETTERS.slice(0,verbalCount)];
+  if(hostMode==="mostlikely") return [activeQuestions[qOrder[qPos]], mltOptions];
   return activeQuestions[qOrder[qPos]];
 }
 
 function publishState(){
   if(role!=="host") return;
-  const verbal = hostMode==="verbal";
-  const payload = {phase:phase, qPos:qPos, verbal:verbal, total:Object.keys(players).length, names:Object.values(players)};
+  const verbal = hostMode==="verbal", mlt = hostMode==="mostlikely";
+  const payload = {phase:phase, qPos:qPos, verbal:verbal, mlt:mlt, total:Object.keys(players).length, names:Object.values(players)};
   if(phase==="voting" || phase==="results"){
     const qa=currentQA(); payload.q=qa[0]; payload.opts=qa[1];
     if(phase==="results"){
-      const t=tally(votes[qPos]||{}, qa[1].length);
-      payload.counts=t.counts; payload.loseOpts=t.loseOpts;
+      const counts=countVotes(votes[qPos]||{}, qa[1].length);
+      const tg=pickTargets(counts, mlt?"most":"fewest");
+      payload.counts=counts; payload.loseOpts=tg.picks;
+      if(mlt) payload.drinkNames = tg.picks.map(function(i){ return qa[1][i]; });
     }
   }
   client.publish(tState(), JSON.stringify(payload), {retain:true});
@@ -346,6 +404,7 @@ function renderHostLobby(){
 function hostNext(){
   if(hostMode==="verbal"){ qPos++; }
   else { qPos++; if(qPos>=qOrder.length){ qOrder=shuffled(activeQuestions.length); qPos=0; } }
+  if(hostMode==="mostlikely"){ mltOptions=Object.values(players); }
   phase="voting";
   $("hostLobby").classList.add("hidden"); $("hostGame").classList.remove("hidden");
   $("hgNext").classList.add("hidden"); $("hgReveal").classList.remove("hidden");
@@ -369,7 +428,7 @@ function setVerbalCount(n){
 }
 
 function renderHostGame(){
-  const verbal = hostMode==="verbal";
+  const verbal = hostMode==="verbal", mlt = hostMode==="mostlikely";
   if(verbal){ ["vc2","vc3","vc4"].forEach(function(id){$(id).classList.remove("on");}); $("vc"+verbalCount).classList.add("on"); }
   const qa=currentQA(); const opts=qa[1];
   $("hgProgress").textContent= verbal ? ("Round "+(qPos+1)) : ("Q"+(qPos+1));
@@ -377,30 +436,43 @@ function renderHostGame(){
   const vm=votes[qPos]||{};
   const voted=Object.keys(vm).length, total=Object.keys(players).length;
   $("hgVoted").textContent= voted+" / "+total+" voted";
-  const t=tally(vm, opts.length);
-  const maxc=Math.max.apply(null,[1].concat(t.counts));
+  const counts=countVotes(vm, opts.length);
+  const tg=pickTargets(counts, mlt?"most":"fewest");
+  const maxc=Math.max.apply(null,[1].concat(counts));
   const wrap=$("hgOpts"); wrap.innerHTML="";
+  if(mlt && opts.length===0){ wrap.innerHTML='<p class="muted">No players in the room yet.</p>'; }
   opts.forEach(function(label,i){
     const d=document.createElement("div"); d.className="btn btn-2 opt"+(verbal?" letter":"");
-    if(phase==="results"){ d.classList.add(t.loseOpts.indexOf(i)>=0?"lose":"safe"); }
+    if(phase==="results"){ d.classList.add(tg.picks.indexOf(i)>=0?"lose":"safe"); }
     const showCount = (phase==="results");
-    const pct = showCount ? Math.round(t.counts[i]/maxc*100) : 0;
+    const pct = showCount ? Math.round(counts[i]/maxc*100) : 0;
     const lbl = verbal ? LETTERS[i] : label;
-    let namesHtml="";
-    if(phase==="results" && t.loseOpts.indexOf(i)>=0){
-      const names=Object.keys(vm).filter(function(id){return vm[id]===i;}).map(function(id){return players[id];}).filter(Boolean);
-      if(names.length) namesHtml='<div class="muted" style="text-align:left;margin-top:6px">Drink: '+names.map(escapeHtml).join(", ")+'</div>';
+    let extra="";
+    if(phase==="results" && tg.picks.indexOf(i)>=0){
+      if(mlt){ extra=' <span style="color:var(--acc2)">drinks!</span>'; }
+      else {
+        const names=Object.keys(vm).filter(function(id){return vm[id]===i;}).map(function(id){return players[id];}).filter(Boolean);
+        if(names.length) extra='<div class="muted" style="text-align:left;margin-top:6px">Drink: '+names.map(escapeHtml).join(", ")+'</div>';
+      }
     }
+    const inlineExtra = (mlt ? extra : "");
+    const blockExtra  = (mlt ? "" : extra);
     d.innerHTML='<div class="bar" style="width:'+pct+'%"></div>'+
-      '<div class="lbl"><span>'+escapeHtml(lbl)+'</span>'+(showCount?'<span class="cnt">'+t.counts[i]+'</span>':'')+'</div>'+namesHtml;
+      '<div class="lbl"><span>'+escapeHtml(lbl)+inlineExtra+'</span>'+(showCount?'<span class="cnt">'+counts[i]+'</span>':'')+'</div>'+blockExtra;
     wrap.appendChild(d);
   });
   if(phase==="results"){
-    if(t.optsWithVotes<2) $("hgStatus").textContent = voted? "Total agreement - nobody drinks this round!" : "No votes came in.";
-    else if(t.loseOpts.length>1) $("hgStatus").textContent = "Tie for fewest - everyone in those options drinks!";
-    else $("hgStatus").textContent = "Fewest votes -> that group drinks!";
+    if(mlt){
+      if(tg.optsWithVotes<1) $("hgStatus").textContent = "No votes came in.";
+      else if(tg.picks.length>1) $("hgStatus").textContent = "It's a tie - they all drink!";
+      else $("hgStatus").textContent = "Most votes -> that person drinks!";
+    } else {
+      if(tg.optsWithVotes<2) $("hgStatus").textContent = voted? "Total agreement - nobody drinks this round!" : "No votes came in.";
+      else if(tg.picks.length>1) $("hgStatus").textContent = "Tie for fewest - everyone in those options drinks!";
+      else $("hgStatus").textContent = "Fewest votes -> that group drinks!";
+    }
   } else {
-    $("hgStatus").textContent = verbal ? "Read the options aloud (A, B, C...). Votes are hidden until you reveal." : "Votes are hidden until you reveal.";
+    $("hgStatus").textContent = verbal ? "Read the options aloud (A, B, C...). Votes are hidden until you reveal." : (mlt ? "Read the prompt aloud. Votes are hidden until you reveal." : "Votes are hidden until you reveal.");
   }
 }
 
@@ -443,6 +515,7 @@ function renderPlayer(){
       });
     } else {
       h+='<div class="q">'+escapeHtml(state.q||"")+'</div>';
+      if(state.mlt && opts.length===0){ h+='<p class="muted">Waiting for players...</p>'; }
       opts.forEach(function(label,i){
         h+='<button class="btn btn-2 opt'+(myChoice===i?' mine':'')+'" onclick="vote('+i+')"><div class="lbl"><span>'+escapeHtml(label)+'</span>'+(myChoice===i?'<span class="cnt">v</span>':'')+'</div></button>';
       });
@@ -452,12 +525,20 @@ function renderPlayer(){
     b.innerHTML=h;
   } else if(state.phase==="results"){
     const counts=state.counts||[], loseOpts=state.loseOpts||[];
-    const iDrink = myChoice!=null && loseOpts.indexOf(myChoice)>=0;
-    let head;
-    if(loseOpts.length===0) head='<div class="big safe-t">Nobody drinks!</div><p class="muted">Total agreement this round.</p>';
-    else if(myChoice==null) head='<div class="big">You didn\'t vote!</div>';
-    else if(iDrink) head='<div class="big drink">DRINK!</div><p class="muted">You picked the least popular - bottoms up.</p>';
-    else head='<div class="big safe-t">You\'re safe</div>';
+    let iDrink, head;
+    if(state.mlt){
+      const dn=state.drinkNames||[];
+      iDrink = dn.indexOf(myName)>=0;
+      if(dn.length===0) head='<div class="big safe-t">No votes!</div>';
+      else if(iDrink) head='<div class="big drink">DRINK!</div><p class="muted">The room voted you most likely. Bottoms up!</p>';
+      else head='<div class="big safe-t">You\'re safe</div><p class="muted">'+escapeHtml(dn.join(", "))+' drinks this round.</p>';
+    } else {
+      iDrink = myChoice!=null && loseOpts.indexOf(myChoice)>=0;
+      if(loseOpts.length===0) head='<div class="big safe-t">Nobody drinks!</div><p class="muted">Total agreement this round.</p>';
+      else if(myChoice==null) head='<div class="big">You didn\'t vote!</div>';
+      else if(iDrink) head='<div class="big drink">DRINK!</div><p class="muted">You picked the least popular - bottoms up.</p>';
+      else head='<div class="big safe-t">You\'re safe</div>';
+    }
     let h='<div class="card center">'+head+'</div>';
     if(!state.verbal && state.q) h+='<div class="q" style="font-size:20px">'+escapeHtml(state.q)+'</div>';
     const maxc=Math.max.apply(null,[1].concat(counts));
