@@ -213,50 +213,50 @@ const QUESTIONS = [
 
 // Most Likely To - prompts only; the options are the players in the room
 const MLT_QUESTIONS = [
-  "Who is most likely to reply to a work email at 2am?",
-  "Who is most likely to be late to the Monday morning meeting?",
-  "Who is most likely to fall asleep in a meeting?",
-  "Who is most likely to survive longest in a zombie apocalypse?",
-  "Who is most likely to win the lottery and tell no one?",
-  "Who is most likely to forget their own birthday?",
-  "Who is most likely to cry during a movie?",
-  "Who is most likely to adopt five cats?",
-  "Who is most likely to still be partying at 3am?",
-  "Who is most likely to accidentally reply-all to the whole company?",
-  "Who is most likely to spend their whole salary on bubble tea?",
-  "Who is most likely to show up to a party way overdressed?",
-  "Who is most likely to fight someone for the last piece of food?",
-  "Who is most likely to sing the loudest at KTV?",
-  "Who is most likely to take the most selfies tonight?",
-  "Who is most likely to lose their phone tonight?",
-  "Who is most likely to move to another country on a whim?",
-  "Who is most likely to win an eating competition?",
-  "Who is most likely to fall for an online scam?",
-  "Who is most likely to binge a whole drama in one night?",
-  "Who is most likely to become a super strict parent?",
-  "Who is most likely to spoil their kids rotten?",
-  "Who is most likely to cancel plans at the last minute?",
-  "Who is most likely to be the first to leave the party?",
-  "Who is most likely to be the last one standing tonight?",
-  "Who is most likely to spend an hour deciding what to eat?",
-  "Who is most likely to marry someone they met online?",
-  "Who is most likely to become internet famous by accident?",
-  "Who is most likely to ghost a date?",
-  "Who is most likely to be an alien in disguise?",
   "Who is most likely to actually be bisexual?",
-  "Who is most likely to scold a client to their face?",
-  "Who is most likely to get fired for an Instagram story?",
-  "Who is most likely to be secretly dating a coworker?",
-  "Who is most likely to start their own cult?",
-  "Who is most likely to snore the loudest on a company trip?",
-  "Who is most likely to flirt their way out of a parking ticket?",
-  "Who is most likely to be the most scared of the boss?",
+  "Who is most likely to fall asleep in a meeting?",
   "Who is most likely to become a supermodel?",
-  "Who is most likely to have had the most ex-boyfriends or girlfriends?",
-  "Who is most likely to win a singing competition?",
+  "Who is most likely to accidentally reply-all to the whole company?",
+  "Who is most likely to ghost a date?",
+  "Who is most likely to be the most scared of the boss?",
+  "Who is most likely to win the lottery and tell no one?",
+  "Who is most likely to scold a client to their face?",
+  "Who is most likely to sing the loudest at KTV?",
   "Who is most likely to lose this round?",
+  "Who is most likely to adopt five cats?",
+  "Who is most likely to be secretly dating a coworker?",
+  "Who is most likely to cancel plans at the last minute?",
+  "Who is most likely to win a singing competition?",
+  "Who is most likely to fight someone for the last piece of food?",
+  "Who is most likely to be an alien in disguise?",
+  "Who is most likely to spend their whole salary on bubble tea?",
+  "Who is most likely to get complimented by a client?",
+  "Who is most likely to survive longest in a zombie apocalypse?",
+  "Who is most likely to flirt their way out of a parking ticket?",
+  "Who is most likely to take the most selfies tonight?",
+  "Who is most likely to become a super strict parent?",
+  "Who is most likely to start their own cult?",
+  "Who is most likely to reply to a work email at 2am?",
+  "Who is most likely to have had the most ex-boyfriends or girlfriends?",
+  "Who is most likely to binge a whole drama in one night?",
+  "Who is most likely to show up to a party way overdressed?",
   "Who is most likely to get a complaint from a client?",
-  "Who is most likely to get complimented by a client?"
+  "Who is most likely to still be partying at 3am?",
+  "Who is most likely to marry someone they met online?",
+  "Who is most likely to snore the loudest on a company trip?",
+  "Who is most likely to forget their own birthday?",
+  "Who is most likely to move to another country on a whim?",
+  "Who is most likely to be the last one standing tonight?",
+  "Who is most likely to get fired for an Instagram story?",
+  "Who is most likely to cry during a movie?",
+  "Who is most likely to win an eating competition?",
+  "Who is most likely to be late to the Monday morning meeting?",
+  "Who is most likely to spoil their kids rotten?",
+  "Who is most likely to lose their phone tonight?",
+  "Who is most likely to be the first to leave the party?",
+  "Who is most likely to fall for an online scam?",
+  "Who is most likely to spend an hour deciding what to eat?",
+  "Who is most likely to become internet famous by accident?"
 ];
 
 let client=null, role=null, room=null, myId=null, myName=null;
@@ -270,6 +270,7 @@ function show(id){ ["home","hostpick","verbalpick","upload","join","player","hos
 function genRoom(){ const c="ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; let r=""; for(let i=0;i<4;i++) r+=c[Math.floor(Math.random()*c.length)]; return r; }
 function getMyId(){ let v=localStorage.getItem("awparty_id"); if(!v){ v="p_"+Math.random().toString(16).slice(2,10); localStorage.setItem("awparty_id",v);} return v; }
 function shuffled(n){ const a=[...Array(n).keys()]; for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); const tmp=a[i]; a[i]=a[j]; a[j]=tmp;} return a; }
+function sampleN(arr, n){ const a=arr.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); const t=a[i]; a[i]=a[j]; a[j]=t;} return a.slice(0, n); }
 function tState(){ return NS+"/"+room+"/state"; }
 function tJoin(){ return NS+"/"+room+"/join"; }
 function tVote(){ return NS+"/"+room+"/vote"; }
@@ -403,7 +404,7 @@ function renderHostLobby(){
 function hostNext(){
   if(hostMode==="verbal"){ qPos++; }
   else { qPos++; if(qPos>=qOrder.length){ qOrder=shuffled(activeQuestions.length); qPos=0; } }
-  if(hostMode==="mostlikely"){ mltOptions=Object.values(players); }
+  if(hostMode==="mostlikely"){ mltOptions=sampleN(Object.values(players), 5); }
   phase="voting";
   $("hostLobby").classList.add("hidden"); $("hostGame").classList.remove("hidden");
   $("hgNext").classList.add("hidden"); $("hgReveal").classList.remove("hidden");
