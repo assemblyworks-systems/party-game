@@ -179,36 +179,36 @@ const NS = "awparty2026";
 const LETTERS = ["A","B","C","D"];
 
 const QUESTIONS = [
-  ["Your ideal weekend?", ["Sleep all day","Party all night","Outdoor adventure","Netflix marathon"]],
-  ["Best cuisine, no debate:", ["Chinese","Japanese","Korean","Western"]],
-  ["Drink of choice (the non-alcoholic one):", ["Coffee","Tea","Bubble tea","Energy drink"]],
-  ["Pineapple on pizza?", ["Yes, love it","No, never","Honestly don't care"]],
-  ["You win $10,000 tomorrow. You:", ["Save every cent","Travel the world","Shopping spree","Treat the whole office"]],
-  ["Your phone battery RIGHT NOW:", ["Above 80%","50-80%","20-50%","Below 20% (living dangerously)"]],
-  ["How fast do you reply to texts?", ["Instantly","Within an hour","'Seen' then forget","Eventually... maybe"]],
-  ["Toilet paper goes:", ["Over","Under","I genuinely don't notice"]],
-  ["You are a:", ["Morning person","Night owl","I suffer either way"]],
-  ["Your karaoke move:", ["Belt a ballad","Rap super fast","Hide and clap","Hog the mic all night"]],
-  ["Your desk right now:", ["Spotless","Organised chaos","Certified disaster zone"]],
-  ["Dream pet:", ["Dog","Cat","Something exotic","No pets, thanks"]],
-  ["At a buffet you:", ["Sprint to dessert","Pace strategically","Eat till you can't move","A little of everything"]],
-  ["Your morning alarm:", ["One and done","3+ snoozes","Five alarms minimum"]],
-  ["In a group project you:", ["Do everything","Contribute fairly","Mysteriously vanish"]],
-  ["Spice tolerance:", ["No spice please","Mild","Bring the heat","I cry but continue"]],
-  ["Travel style:", ["Plan every minute","Loose plan","Total wing-it"]],
-  ["Favourite season:", ["Spring","Summer","Autumn","Winter"]],
-  ["Perfect Friday night:", ["Out clubbing","Dinner with friends","Gaming at home","Already asleep"]],
-  ["Pick a superpower:", ["Fly","Invisibility","Teleport","Read minds"]],
-  ["Your shower singing is:", ["Concert-level","Pretty decent","Terrible but joyful","I don't sing"]],
-  ["Last app you opened before this:", ["Instagram","TikTok","WhatsApp/Telegram","Work email (respect)"]],
-  ["Your guilty vice:", ["Sweet tooth","Online shopping","Doom-scrolling","Caffeine"]],
-  ["If the office had a nap room you'd:", ["Use it daily","Sometimes","Never (suspicious)"]],
-  ["Your cooking skills:", ["MasterChef","I survive","Delivery is my personal chef"]],
-  ["Zombie apocalypse, your role:", ["The leader","The fighter","The strategist","First one gone"]],
-  ["You're late because:", ["Overslept","Traffic","'Lost track of time'","I'm never late"]],
-  ["Hot weather, you:", ["Crank the aircon","Suffer silently","Complain loudly","Love it, actually"]],
-  ["The office group chat - you:", ["Mute it","Read, never reply","Reply to everything","What group chat?"]],
-  ["Pick a midnight snack:", ["Instant noodles","Leftovers","Sweet stuff","I have discipline"]]
+  ["Your kopi order?", ["Kopi-O kosong","Kopi-C","Kopi peng","I just drink Starbucks"]],
+  ["Best hawker breakfast?", ["Kaya toast set","Nasi lemak","Chwee kueh","Roti prata"]],
+  ["Crab, you order:", ["Chilli crab","Black pepper","Salted egg","Cereal prawn instead"]],
+  ["Durian?", ["Die-die must eat","Musang King only","Cannot stand it","Never tried"]],
+  ["Dream home:", ["BTO","Resale HDB","Condo","Landed or bust"]],
+  ["Weekend JB run?", ["Every chance I get","Once in a while","Never","What's in JB?"]],
+  ["Your English at work:", ["Full Singlish lah","Code-switch pro","Proper English only"]],
+  ["Mala spice level:", ["Xiao la","Zhong la","Da la","I don't touch mala"]],
+  ["Bubble tea habit:", ["Daily","A few times a week","Once in a blue moon","I don't drink it"]],
+  ["Phone loyalty:", ["iPhone","Samsung","Other Android","Still on an ancient one"]],
+  ["CNY, honestly:", ["Love the reunion","Here for the angbao","Dread the questions","Bah humbug"]],
+  ["Supper of choice:", ["Prata","Maggi goreng","Bak chor mee","McDonald's"]],
+  ["Office aircon should be:", ["Freezing (18)","24 is fine","Switch it off","I bring a jacket"]],
+  ["Daily lunch budget:", ["Under $5","$5 to $10","$10 to $15","Atas, $15+"]],
+  ["How you take lunch:", ["Dabao to desk","Proper sit-down","Skip it","Delivery every day"]],
+  ["Boss says 'OT tonight':", ["Sure, no problem","Quietly suffer","Already went home","WFH means no OT"]],
+  ["Next holiday:", ["Japan","Bangkok","Bali","KL is enough"]],
+  ["You'll queue for:", ["Bubble tea","A hawker stall","Limited sneakers","I never queue"]],
+  ["Your WhatsApp reply:", ["Instant","Within hours","Left on read","Just 'ok'"]],
+  ["On the MRT you:", ["Always score a seat","Give up your seat","Pretend to sleep","Dodge peak hour"]],
+  ["Dialect skills:", ["Quite fluent","A few phrases","Only the swear words","None at all"]],
+  ["National Day:", ["Love the NDP","Just enjoy the PH","Fireworks only","What parade?"]],
+  ["Colleague's wedding angbao:", ["$50","$88","$128","Depends on the hotel"]],
+  ["Your weekend vibe:", ["Cafe hopping","Stay home and rot","Gym","Fly off if can"]],
+  ["Chilli padi tolerance:", ["I add it to everything","A little is fine","None for me","Bring the pain"]],
+  ["Your desk at AW:", ["Spotless","Organised chaos","Snack stash","Disaster zone"]],
+  ["Client email at 6pm Friday:", ["Reply immediately","Monday problem","Mild panic","Pretend I didn't see"]],
+  ["Office pantry, you:", ["Wash my own cup","Leave it in the sink","Never use it","I'm the kopi runner"]],
+  ["Meetings, you're:", ["Always early","Bang on time","Fashionably late","Joining from the loo"]],
+  ["Payday plan:", ["Save it all","Treat myself","Invest it","Gone by next week"]]
 ];
 
 // Most Likely To - prompts only; the options are the players in the room
@@ -447,16 +447,12 @@ function renderHostGame(){
     const showCount = (phase==="results");
     const pct = showCount ? Math.round(counts[i]/maxc*100) : 0;
     const lbl = verbal ? LETTERS[i] : label;
-    let extra="";
-    if(phase==="results" && tg.picks.indexOf(i)>=0){
-      if(mlt){ extra=' <span style="color:var(--acc2)">drinks!</span>'; }
-      else {
-        const names=Object.keys(vm).filter(function(id){return vm[id]===i;}).map(function(id){return players[id];}).filter(Boolean);
-        if(names.length) extra='<div class="muted" style="text-align:left;margin-top:6px">Drink: '+names.map(escapeHtml).join(", ")+'</div>';
-      }
+    let inlineExtra="", blockExtra="";
+    if(phase==="results"){
+      if(mlt && tg.picks.indexOf(i)>=0) inlineExtra=' <span style="color:var(--acc2)">drinks!</span>';
+      const names=Object.keys(vm).filter(function(id){return vm[id]===i;}).map(function(id){return players[id];}).filter(Boolean);
+      if(names.length) blockExtra='<div class="muted" style="text-align:left;margin-top:6px">'+names.map(escapeHtml).join(", ")+'</div>';
     }
-    const inlineExtra = (mlt ? extra : "");
-    const blockExtra  = (mlt ? "" : extra);
     d.innerHTML='<div class="bar" style="width:'+pct+'%"></div>'+
       '<div class="lbl"><span>'+escapeHtml(lbl)+inlineExtra+'</span>'+(showCount?'<span class="cnt">'+counts[i]+'</span>':'')+'</div>'+blockExtra;
     wrap.appendChild(d);
