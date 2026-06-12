@@ -76,7 +76,6 @@
     <div class="card">
       <button class="btn btn-acc" onclick="startHost('builtin')">Minority Drinks - built-in<br><span style="font-weight:500;font-size:13px;opacity:.8">30 ready-made questions, fewest votes drinks</span></button>
       <button class="btn btn-acc" onclick="startHost('mostlikely')">Most Likely To<br><span style="font-weight:500;font-size:13px;opacity:.8">Vote for a person - most votes drinks</span></button>
-      <button class="btn btn-2" onclick="show('upload')">Upload my own questions<br><span style="font-weight:500;font-size:13px;opacity:.8">Paste or load a file (fewest votes drinks)</span></button>
       <button class="btn btn-2" onclick="show('verbalpick')">Verbal mode (A-D)<br><span style="font-weight:500;font-size:13px;opacity:.8">Say it out loud, players pick a letter - unlimited / impromptu</span></button>
       <button class="btn btn-ghost" onclick="backFromPick()">Back</button>
     </div>
@@ -210,7 +209,37 @@ const QUESTIONS = [
   ["Client email at 6pm Friday:", ["Reply immediately","Monday problem","Mild panic","Pretend I didn't see"]],
   ["Office pantry, you:", ["Wash my own cup","Leave it in the sink","Never use it","I'm the kopi runner"]],
   ["Meetings, you're:", ["Always early","Bang on time","Fashionably late","Joining from the loo"]],
-  ["Payday plan:", ["Save it all","Treat myself","Invest it","Gone by next week"]]
+  ["Payday plan:", ["Save it all","Treat myself","Invest it","Gone by next week"]],
+  ["Chicken rice, you order:", ["Steamed","Roasted","Duck rice instead","Not a fan"]],
+  ["Your prata order:", ["Kosong","Egg","Cheese","Planta and sugar"]],
+  ["Teh order:", ["Teh-O","Teh-C","Teh peng","Teh tarik"]],
+  ["Favourite local dessert:", ["Chendol","Ice kacang","Tau huay","Anything durian"]],
+  ["Nasi lemak chilli:", ["Must be spicy","Mild is fine","No chilli","I drown it in sambal"]],
+  ["Weekend lie-in:", ["Up by 8","Around 10","Past noon","What is sleep"]],
+  ["Gym membership:", ["Use it weekly","Paying out of guilt","Never go","I basically live there"]],
+  ["Karaoke song of choice:", ["Mandopop ballad","English pop","Hokkien classic","I just eat and clap"]],
+  ["4D or Toto:", ["Every week","Only when jackpot is huge","Never","What is that"]],
+  ["Your driving:", ["Confident","Very kancheong","I Grab everywhere","No license"]],
+  ["Your Spotify Wrapped:", ["Proud of it","A bit embarrassing","All Taylor Swift","All Mandopop"]],
+  ["Group dinner, you:", ["Pick the place","Just follow","Always late","Cancel last minute"]],
+  ["Splitting the bill:", ["Split evenly","Pay exact amount","PayNow champion","Forget my wallet"]],
+  ["Park or reservoir run:", ["Love it","Once a year","Only for the photo","Never"]],
+  ["McSpicy:", ["Too spicy","Just nice","Not spicy enough","I get nuggets"]],
+  ["CNY snack weakness:", ["Pineapple tarts","Love letters","Bak kwa","Kueh lapis"]],
+  ["Public holiday plan:", ["Staycation","Fly off somewhere","Sleep all day","Catch up on work"]],
+  ["Reply to 'where to eat?':", ["I decide","Anything can","Veto everything","Suggest then reject all"]],
+  ["Atas dining vs cai png:", ["Cai png all day","Atas occasionally","Atas always","Buffet only"]],
+  ["Your Grab passenger rating:", ["A perfect 5","Pretty high","Don't want to know","I always tip"]],
+  ["Taking office MC:", ["Never take","Only when dying","Mental health day, yes","Strategic long weekend"]],
+  ["Your desk snack:", ["Nuts or fruit","Chips","Sweets","I raid the pantry"]],
+  ["CNY house visiting:", ["Love it","Tahan only","Strategic avoidance","I host instead"]],
+  ["End of the workday you:", ["Leave on the dot","Stay 30 min more","Last to leave","WFH so it never ends"]],
+  ["Your handphone wallpaper:", ["Family or partner","My pet","A meme","Default one"]],
+  ["When the lift is slow:", ["Wait patiently","Take the stairs","Mash the button","Give up and sit"]],
+  ["Your umbrella game:", ["Always have one","Lives in my bag","Buy a new one each time","Just dash through rain"]],
+  ["Fitness tracker steps:", ["10k+ daily","Some days","It's just decoration","What tracker"]],
+  ["Your phone ringtone:", ["On silent always","Vibrate only","Full volume","An embarrassing song"]],
+  ["At home, you sleep with:", ["Aircon every night","Aircon only when hot","Fan is enough","I like it freezing"]]
 ];
 
 // Most Likely To - prompts only; the options are the players in the room
