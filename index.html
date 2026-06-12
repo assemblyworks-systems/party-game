@@ -263,7 +263,7 @@ let client=null, role=null, room=null, myId=null, myName=null;
 let hostMode="builtin", activeQuestions=QUESTIONS, verbalCount=4, verbalStart=4, pendingCustom=null, mltOptions=[];
 let qOrder=[], qPos=-1, phase="lobby";
 let players={}, votes={};
-let state=null, myChoice=null;
+let state=null, myChoice=null, lastSeenQ=-1;
 
 const $ = id => document.getElementById(id);
 function show(id){ ["home","hostpick","verbalpick","upload","join","player","host"].forEach(s=>$(s).classList.add("hidden")); $(id).classList.remove("hidden"); }
@@ -503,8 +503,9 @@ function renderPlayer(){
   if(!state){ b.innerHTML='<div class="card center"><p class="muted">Waiting for the host...</p></div>'; return; }
   if(state.phase==="lobby"){
     b.innerHTML='<div class="card center"><h1 style="margin-top:0">You\'re in!</h1><p class="muted">'+state.total+' players ready. Waiting for the host to start...</p></div>';
-    myChoice=null; return;
+    myChoice=null; lastSeenQ=-1; return;
   }
+  if(state.qPos!==lastSeenQ){ myChoice=null; lastSeenQ=state.qPos; }
   const opts=state.opts||[];
   if(state.phase==="voting"){
     let h="";
