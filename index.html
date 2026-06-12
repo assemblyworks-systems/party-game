@@ -78,7 +78,7 @@
       <button class="btn btn-acc" onclick="startHost('mostlikely')">Most Likely To<br><span style="font-weight:500;font-size:13px;opacity:.8">Vote for a person - most votes drinks</span></button>
       <button class="btn btn-2" onclick="show('upload')">Upload my own questions<br><span style="font-weight:500;font-size:13px;opacity:.8">Paste or load a file (fewest votes drinks)</span></button>
       <button class="btn btn-2" onclick="show('verbalpick')">Verbal mode (A-D)<br><span style="font-weight:500;font-size:13px;opacity:.8">Say it out loud, players pick a letter - unlimited / impromptu</span></button>
-      <button class="btn btn-ghost" onclick="show('home')">Back</button>
+      <button class="btn btn-ghost" onclick="backFromPick()">Back</button>
     </div>
   </div>
 
@@ -147,6 +147,7 @@ Office aircon is... | Too cold | Perfect | Too warm</pre>
         <p class="center" style="margin:0 0 8px"><span class="pill" id="hMode"></span> &nbsp; <b id="hCount">0</b> players</p>
         <div class="players" id="hPlayers"></div>
         <button class="btn btn-acc" id="hStartBtn" onclick="hostNext()" style="margin-top:14px">Start the game</button>
+        <button class="btn btn-ghost" onclick="show('hostpick')">Change category</button>
       </div>
     </div>
 
@@ -168,6 +169,7 @@ Office aircon is... | Too cold | Perfect | Too warm</pre>
       </div>
       <div class="status" id="hgStatus"></div>
       <button class="btn btn-ghost" id="hgShuffle" onclick="hostShuffle()">Shuffle questions</button>
+      <button class="btn btn-ghost" onclick="show('hostpick')">Change category (keep players)</button>
     </div>
   </div>
 
@@ -332,30 +334,40 @@ function useUploaded(){ if(pendingCustom && pendingCustom.length) startHost("cus
 function setVerbalStart(n){ verbalStart=n; ["vs2","vs3","vs4"].forEach(function(id){$(id).classList.remove("on");}); $("vs"+n).classList.add("on"); }
 
 function startHost(mode, customQs){
-  hostMode=mode;
-  if(mode==="custom"){ activeQuestions=customQs; }
-  else if(mode==="builtin"){ activeQuestions=QUESTIONS; }
-  else if(mode==="mostlikely"){ activeQuestions=MLT_QUESTIONS; }
-  else { activeQuestions=[]; verbalCount=verbalStart; }
-  role="host"; room=genRoom(); myId=getMyId();
-  qOrder = (mode==="verbal") ? [] : shuffled(activeQuestions.length);
-  qPos=-1; phase="lobby"; players={}; votes={}; mltOptions=[];
+  ensureRoomThen(function(){ applyMode(mode, customQs); });
+}
+function ensureRoomThen(cb){
+  if(client && room){ cb(); return; }   // room already exists - reuse it (no rejoin)
+  role="host"; room=genRoom(); myId=getMyId(); players={};
   show("host");
   $("hRoom").textContent=room; $("hRoom2").textContent=room; $("hgRoom").textContent="Room "+room;
-  $("hMode").textContent = mode==="verbal" ? "Verbal mode" : (mode==="custom" ? (activeQuestions.length+" custom questions") : (mode==="mostlikely" ? "Most Likely To" : "Minority - Built-in"));
-  $("hgShuffle").classList.toggle("hidden", mode==="verbal");
-  $("hgVerbalCtrl").classList.toggle("hidden", mode!=="verbal");
   const url = location.origin+location.pathname+"?r="+room;
   $("hLink").textContent=url;
   $("qr").innerHTML="";
   try{ new QRCode($("qr"), {text:url, width:200, height:200, correctLevel:QRCode.CorrectLevel.M}); }
   catch(e){ $("qr").innerHTML='<p class="muted">'+url+'</p>'; }
-  $("hostLobby").classList.remove("hidden"); $("hostGame").classList.add("hidden");
   connect(function(){
     client.subscribe(tJoin()); client.subscribe(tVote());
-    publishState();
+    cb();
   });
 }
+function applyMode(mode, customQs){
+  hostMode=mode;
+  if(mode==="custom"){ activeQuestions=customQs; }
+  else if(mode==="builtin"){ activeQuestions=QUESTIONS; }
+  else if(mode==="mostlikely"){ activeQuestions=MLT_QUESTIONS; }
+  else { activeQuestions=[]; verbalCount=verbalStart; }
+  qOrder = (mode==="verbal") ? [] : shuffled(activeQuestions.length);
+  qPos=-1; phase="lobby"; votes={}; mltOptions=[];   // keep players - no rejoin needed
+  $("hMode").textContent = mode==="verbal" ? "Verbal mode" : (mode==="custom" ? (activeQuestions.length+" custom questions") : (mode==="mostlikely" ? "Most Likely To" : "Minority - Built-in"));
+  $("hgShuffle").classList.toggle("hidden", mode==="verbal");
+  $("hgVerbalCtrl").classList.toggle("hidden", mode!=="verbal");
+  $("hostLobby").classList.remove("hidden"); $("hostGame").classList.add("hidden");
+  show("host");
+  renderHostLobby();
+  publishState();
+}
+function backFromPick(){ if(client && room) show("host"); else show("home"); }
 
 function currentQA(){
   if(hostMode==="verbal") return ["", LETTERS.slice(0,verbalCount)];
